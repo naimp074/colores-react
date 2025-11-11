@@ -1,32 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
+import {
+  obtenerColores,
+  agregarColor as agregarColorAPI,
+  editarColor as editarColorAPI,
+  eliminarColor as eliminarColorAPI,
+} from "./services/api";
 
 function App() {
-  const [colores, setColores] = useState([
-    { 
-      id: 1, 
-      nombre: "Azul", 
-      hex: "#0000FF",
-      rgb: "rgb(0, 0, 255)"
-    },
-    { 
-      id: 2, 
-      nombre: "Melocotón", 
-      hex: "#FFDAB9",
-      rgb: "rgb(255, 218, 185)"
-    },
-    { 
-      id: 3, 
-      nombre: "Rosa", 
-      hex: "#FFC0CB",
-      rgb: "rgb(255, 192, 203)"
-    }
-  ]);
-
+  const [colores, setColores] = useState([]);
   const [nombreColor, setNombreColor] = useState("");
   const [hexColor, setHexColor] = useState("");
   const [rgbColor, setRgbColor] = useState("");
   const [editandoId, setEditandoId] = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
+  const [procesando, setProcesando] = useState(false);
 
   // Función auxiliar para obtener el valor de color a mostrar
   const obtenerValorColor = (color) => {
@@ -122,8 +111,28 @@ function App() {
     }
   };
 
+  // Cargar colores al montar el componente
+  useEffect(() => {
+    cargarColores();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const cargarColores = async () => {
+    try {
+      setCargando(true);
+      setError(null);
+      const datos = await obtenerColores();
+      setColores(datos);
+    } catch (err) {
+      setError(err.message || "Error al cargar los colores");
+      console.error("Error al cargar colores:", err);
+    } finally {
+      setCargando(false);
+    }
+  };
+
   // Agregar color
-  const agregarColor = () => {
+  const agregarColor = async () => {
     // El nombre debe tener valor (puede ser el hex o rgb si se ingresó)
     const nombreFinal = nombreColor.trim() || hexColor.trim() || rgbColor.trim();
     if (!nombreFinal) {
@@ -131,17 +140,24 @@ function App() {
       return;
     }
 
-    const nuevo = {
-      id: Date.now(),
-      nombre: nombreFinal,
-      hex: hexColor.trim() || undefined,
-      rgb: rgbColor.trim() || undefined
-    };
-
-    setColores([...colores, nuevo]);
-    setNombreColor("");
-    setHexColor("");
-    setRgbColor("");
+    try {
+      setProcesando(true);
+      setError(null);
+      const nuevoColor = await agregarColorAPI({
+        nombre: nombreFinal,
+        hex: hexColor.trim() || undefined,
+        rgb: rgbColor.trim() || undefined,
+      });
+      setColores([...colores, nuevoColor]);
+      setNombreColor("");
+      setHexColor("");
+      setRgbColor("");
+    } catch (err) {
+      setError(err.message || "Error al agregar el color");
+      alert(err.message || "Error al agregar el color");
+    } finally {
+      setProcesando(false);
+    }
   };
 
   // Editar color
@@ -156,7 +172,7 @@ function App() {
   };
 
   // Guardar edición
-  const guardarEdicion = () => {
+  const guardarEdicion = async () => {
     // El nombre debe tener valor (puede ser el hex o rgb si se ingresó)
     const nombreFinal = nombreColor.trim() || hexColor.trim() || rgbColor.trim();
     if (!nombreFinal) {
@@ -164,23 +180,27 @@ function App() {
       return;
     }
 
-    setColores(
-      colores.map((c) =>
-        c.id === editandoId
-          ? {
-              id: c.id,
-              nombre: nombreFinal,
-              hex: hexColor.trim() || undefined,
-              rgb: rgbColor.trim() || undefined
-            }
-          : c
-      )
-    );
-
-    setEditandoId(null);
-    setNombreColor("");
-    setHexColor("");
-    setRgbColor("");
+    try {
+      setProcesando(true);
+      setError(null);
+      const colorActualizado = await editarColorAPI(editandoId, {
+        nombre: nombreFinal,
+        hex: hexColor.trim() || undefined,
+        rgb: rgbColor.trim() || undefined,
+      });
+      setColores(
+        colores.map((c) => (c.id === editandoId ? colorActualizado : c))
+      );
+      setEditandoId(null);
+      setNombreColor("");
+      setHexColor("");
+      setRgbColor("");
+    } catch (err) {
+      setError(err.message || "Error al editar el color");
+      alert(err.message || "Error al editar el color");
+    } finally {
+      setProcesando(false);
+    }
   };
 
   // Cancelar edición
@@ -197,12 +217,39 @@ function App() {
   };
 
   // Eliminar color
-  const borrarColor = (id) => {
-    setColores(colores.filter((c) => c.id !== id));
+  const borrarColor = async (id) => {
+    if (!window.confirm("¿Está seguro de que desea eliminar este color?")) {
+      return;
+    }
+
+    try {
+      setProcesando(true);
+      setError(null);
+      await eliminarColorAPI(id);
+      setColores(colores.filter((c) => c.id !== id));
+    } catch (err) {
+      setError(err.message || "Error al eliminar el color");
+      alert(err.message || "Error al eliminar el color");
+    } finally {
+      setProcesando(false);
+    }
   };
 
   return (
     <div className="container py-4">
+      {/* Mensaje de error */}
+      {error && (
+        <div className="alert alert-danger alert-dismissible fade show" role="alert">
+          <strong>Error:</strong> {error}
+          <button
+            type="button"
+            className="btn-close"
+            onClick={() => setError(null)}
+            aria-label="Close"
+          ></button>
+        </div>
+      )}
+
       {/* Formulario */}
       <div className="card mb-4 shadow-sm">
         <div className="card-header">
@@ -282,16 +329,25 @@ function App() {
                   <button
                     className="btn btn-success me-2"
                     onClick={guardarEdicion}
+                    disabled={procesando}
                   >
-                    Guardar cambios
+                    {procesando ? "Guardando..." : "Guardar cambios"}
                   </button>
-                  <button className="btn btn-secondary" onClick={cancelarEdicion}>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={cancelarEdicion}
+                    disabled={procesando}
+                  >
                     Cancelar
                   </button>
                 </>
               ) : (
-                <button className="btn btn-primary" onClick={agregarColor}>
-                  Agregar color
+                <button
+                  className="btn btn-primary"
+                  onClick={agregarColor}
+                  disabled={procesando}
+                >
+                  {procesando ? "Agregando..." : "Agregar color"}
                 </button>
               )}
             </div>
@@ -317,8 +373,20 @@ function App() {
       </div>
 
       {/* Lista de colores */}
-      <div className="row">
-        {colores.map((color) => (
+      {cargando ? (
+        <div className="text-center py-5">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Cargando...</span>
+          </div>
+          <p className="mt-3">Cargando colores...</p>
+        </div>
+      ) : colores.length === 0 ? (
+        <div className="alert alert-info text-center">
+          No hay colores en la paleta. Agrega tu primer color arriba.
+        </div>
+      ) : (
+        <div className="row">
+          {colores.map((color) => (
           <div className="col-md-3 mb-3" key={color.id}>
             <div className="card shadow-sm">
               <div className="card-header text-center">
@@ -359,14 +427,14 @@ function App() {
                   <button
                     className="btn btn-warning btn-sm"
                     onClick={() => editarColor(color.id)}
-                    disabled={editandoId === color.id}
+                    disabled={editandoId === color.id || procesando}
                   >
                     Editar
                   </button>
                   <button
                     className="btn btn-danger btn-sm"
                     onClick={() => borrarColor(color.id)}
-                    disabled={editandoId === color.id}
+                    disabled={editandoId === color.id || procesando}
                   >
                     Borrar
                   </button>
@@ -375,7 +443,8 @@ function App() {
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
