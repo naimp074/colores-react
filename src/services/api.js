@@ -1,26 +1,24 @@
 // Detectar si estamos en desarrollo o producción
 const isDevelopment = import.meta.env.DEV;
-// URL del backend: usa variable de entorno, o detecta automáticamente
-const API_BASE_URL = 
-  import.meta.env.VITE_API_URL || 
+
+// URL del backend: usa variable de entorno VITE_API_URL (debe terminar en /api)
+const base = import.meta.env.VITE_API_URL || 
   (isDevelopment 
     ? "http://localhost:3001/api" 
     : "https://colores-back-five.vercel.app/api");
 
-// Log para debug (solo en desarrollo)
-if (isDevelopment) {
-  console.log("🔧 Modo desarrollo - API URL:", API_BASE_URL);
-} else {
-  console.log("🚀 Modo producción - API URL:", API_BASE_URL);
-}
+// Log para debug
+console.log(isDevelopment ? "🔧 Modo desarrollo" : "🚀 Modo producción", "- API URL:", base);
 
 // Función helper para hacer peticiones
 const fetchAPI = async (endpoint, options = {}) => {
   try {
-    // Asegurar que no haya doble slash en la URL
-    const baseUrl = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
+    // Asegurar que base termine en /api y endpoint empiece con /
+    const baseUrl = base.endsWith('/api') ? base : base.endsWith('/') ? base.slice(0, -1) : `${base}/api`;
     const endpointPath = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const url = `${baseUrl}${endpointPath}`;
+    
+    console.log("📡 Fetching:", url); // Debug
     
     const response = await fetch(url, {
       headers: {
