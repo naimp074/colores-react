@@ -5,7 +5,7 @@ const API_BASE_URL =
   import.meta.env.VITE_API_URL || 
   (isDevelopment 
     ? "http://localhost:3001/api" 
-    : "https://tu-backend.vercel.app/api"); // ⚠️ REEMPLAZA con tu URL real de Vercel
+    : "https://colores-back-five.vercel.app/api");
 
 // Log para debug (solo en desarrollo)
 if (isDevelopment) {
