@@ -118,16 +118,27 @@ function App() {
   }, []);
 
   const cargarColores = async () => {
+    console.log("🔄 Iniciando carga de colores...");
     try {
       setCargando(true);
       setError(null);
+      console.log("⏳ Obteniendo colores del backend...");
       const datos = await obtenerColores();
+      console.log("✅ Colores obtenidos exitosamente:", datos);
+      console.log("📊 Total de colores:", datos.length);
       setColores(datos);
+      console.log("✅ Estado actualizado con", datos.length, "colores");
     } catch (err) {
-      setError(err.message || "Error al cargar los colores");
-      console.error("Error al cargar colores:", err);
+      const mensajeError = err.message || "Error al cargar los colores";
+      console.error("❌ ERROR AL CARGAR COLORES:");
+      console.error("   Tipo:", err.name);
+      console.error("   Mensaje:", mensajeError);
+      console.error("   Stack:", err.stack);
+      setError(mensajeError);
+      console.error("💡 Revisa la consola arriba para más detalles del error");
     } finally {
       setCargando(false);
+      console.log("🏁 Carga de colores finalizada");
     }
   };
 

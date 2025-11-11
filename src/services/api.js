@@ -7,18 +7,35 @@ const base = import.meta.env.VITE_API_URL ||
     ? "http://localhost:3001/api" 
     : "https://colores-back-five.vercel.app/api");
 
-// Log para debug
-console.log(isDevelopment ? "🔧 Modo desarrollo" : "🚀 Modo producción", "- API URL:", base);
+// Logs detallados para diagnóstico
+console.log("═══════════════════════════════════════");
+console.log("🔍 DIAGNÓSTICO DE CONFIGURACIÓN");
+console.log("═══════════════════════════════════════");
+console.log("📍 Modo:", isDevelopment ? "🔧 DESARROLLO" : "🚀 PRODUCCIÓN");
+console.log("🌐 Variable VITE_API_URL:", import.meta.env.VITE_API_URL || "❌ NO CONFIGURADA");
+console.log("🔗 URL Base de API:", base);
+if (!import.meta.env.VITE_API_URL && !isDevelopment) {
+  console.warn("⚠️ ADVERTENCIA: VITE_API_URL no está configurada en Netlify!");
+  console.warn("⚠️ Usando URL por defecto:", base);
+  console.warn("⚠️ Ve a Netlify → Site settings → Environment variables");
+  console.warn("⚠️ Agrega: VITE_API_URL = https://colores-back-five.vercel.app/api");
+}
+console.log("═══════════════════════════════════════");
 
 // Función helper para hacer peticiones
 const fetchAPI = async (endpoint, options = {}) => {
+  // Asegurar que base termine en /api y endpoint empiece con /
+  const baseUrl = base.endsWith('/api') ? base : base.endsWith('/') ? base.slice(0, -1) : `${base}/api`;
+  const endpointPath = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = `${baseUrl}${endpointPath}`;
+  
   try {
-    // Asegurar que base termine en /api y endpoint empiece con /
-    const baseUrl = base.endsWith('/api') ? base : base.endsWith('/') ? base.slice(0, -1) : `${base}/api`;
-    const endpointPath = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const url = `${baseUrl}${endpointPath}`;
-    
-    console.log("📡 Fetching:", url); // Debug
+    console.log("─────────────────────────────────────");
+    console.log("📡 SOLICITUD API");
+    console.log("─────────────────────────────────────");
+    console.log("🔗 URL completa:", url);
+    console.log("📝 Método:", options.method || "GET");
+    console.log("📦 Endpoint:", endpoint);
     
     const response = await fetch(url, {
       headers: {
@@ -28,14 +45,55 @@ const fetchAPI = async (endpoint, options = {}) => {
       ...options,
     });
 
+    console.log("📊 Respuesta recibida:");
+    console.log("   Status:", response.status, response.statusText);
+    console.log("   OK:", response.ok);
+    console.log("   Headers CORS:", {
+      "Access-Control-Allow-Origin": response.headers.get("Access-Control-Allow-Origin"),
+      "Access-Control-Allow-Methods": response.headers.get("Access-Control-Allow-Methods"),
+    });
+
     const data = await response.json();
+    console.log("✅ Datos recibidos:", data);
 
     if (!response.ok) {
-      throw new Error(data.mensaje || "Error en la petición");
+      console.error("❌ Error en la respuesta:");
+      console.error("   Status:", response.status);
+      console.error("   Mensaje:", data.mensaje || "Error desconocido");
+      console.error("   Datos completos:", data);
+      throw new Error(data.mensaje || `Error ${response.status}: ${response.statusText}`);
     }
 
+    console.log("✅ Solicitud exitosa");
+    console.log("─────────────────────────────────────");
     return data;
   } catch (error) {
+    console.error("─────────────────────────────────────");
+    console.error("❌ ERROR EN LA SOLICITUD");
+    console.error("─────────────────────────────────────");
+    console.error("🔗 URL intentada:", url);
+    console.error("📝 Tipo de error:", error.name);
+    console.error("💬 Mensaje:", error.message);
+    
+    if (error.name === "TypeError" && error.message.includes("Failed to fetch")) {
+      console.error("🔍 DIAGNÓSTICO:");
+      console.error("   1. ¿El backend está funcionando?");
+      console.error("   2. ¿La URL es correcta?", url);
+      console.error("   3. ¿Hay problemas de CORS?");
+      console.error("   4. ¿El backend responde a OPTIONS?");
+      console.error("💡 SOLUCIÓN:");
+      console.error("   - Verifica que el backend esté desplegado en Vercel");
+      console.error("   - Verifica la variable VITE_API_URL en Netlify");
+      console.error("   - Prueba la URL directamente:", url);
+    }
+    
+    if (error.name === "SyntaxError") {
+      console.error("🔍 DIAGNÓSTICO:");
+      console.error("   El servidor no devolvió JSON válido");
+      console.error("   Posible error 404 o 500 en el backend");
+    }
+    
+    console.error("─────────────────────────────────────");
     throw error;
   }
 };
