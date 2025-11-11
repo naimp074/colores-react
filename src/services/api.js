@@ -17,7 +17,12 @@ if (isDevelopment) {
 // Función helper para hacer peticiones
 const fetchAPI = async (endpoint, options = {}) => {
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    // Asegurar que no haya doble slash en la URL
+    const baseUrl = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
+    const endpointPath = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = `${baseUrl}${endpointPath}`;
+    
+    const response = await fetch(url, {
       headers: {
         "Content-Type": "application/json",
         ...options.headers,
