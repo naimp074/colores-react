@@ -20,12 +20,27 @@ if (!import.meta.env.VITE_API_URL && !isDevelopment) {
   console.warn("⚠️ Ve a Netlify → Site settings → Environment variables");
   console.warn("⚠️ Agrega: VITE_API_URL = https://colores-back-five.vercel.app/api");
 }
+
+if (isDevelopment) {
+  console.log("💡 Para desarrollo local:");
+  console.log("   1. Asegúrate de que el backend esté corriendo en http://localhost:3001");
+  console.log("   2. Verifica que el .env tenga: VITE_API_URL=http://localhost:3001/api");
+  console.log("   3. Si cambiaste el .env, reinicia el servidor de desarrollo (npm run dev)");
+}
 console.log("═══════════════════════════════════════");
 
 // Función helper para hacer peticiones
 const fetchAPI = async (endpoint, options = {}) => {
-  // Asegurar que base termine en /api y endpoint empiece con /
-  const baseUrl = base.endsWith('/api') ? base : base.endsWith('/') ? base.slice(0, -1) : `${base}/api`;
+  // Construir URL correctamente
+  let baseUrl = base.trim();
+  // Asegurar que base termine en /api (sin barra final)
+  if (baseUrl.endsWith('/api/')) {
+    baseUrl = baseUrl.slice(0, -1); // Quitar barra final
+  } else if (!baseUrl.endsWith('/api')) {
+    baseUrl = baseUrl.endsWith('/') ? `${baseUrl.slice(0, -1)}/api` : `${baseUrl}/api`;
+  }
+  
+  // Asegurar que endpoint empiece con /
   const endpointPath = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   const url = `${baseUrl}${endpointPath}`;
   
@@ -33,6 +48,8 @@ const fetchAPI = async (endpoint, options = {}) => {
     console.log("─────────────────────────────────────");
     console.log("📡 SOLICITUD API");
     console.log("─────────────────────────────────────");
+    console.log("🔗 URL Base original:", base);
+    console.log("🔗 URL Base procesada:", baseUrl);
     console.log("🔗 URL completa:", url);
     console.log("📝 Método:", options.method || "GET");
     console.log("📦 Endpoint:", endpoint);
@@ -77,14 +94,31 @@ const fetchAPI = async (endpoint, options = {}) => {
     
     if (error.name === "TypeError" && error.message.includes("Failed to fetch")) {
       console.error("🔍 DIAGNÓSTICO:");
-      console.error("   1. ¿El backend está funcionando?");
-      console.error("   2. ¿La URL es correcta?", url);
-      console.error("   3. ¿Hay problemas de CORS?");
-      console.error("   4. ¿El backend responde a OPTIONS?");
-      console.error("💡 SOLUCIÓN:");
-      console.error("   - Verifica que el backend esté desplegado en Vercel");
-      console.error("   - Verifica la variable VITE_API_URL en Netlify");
-      console.error("   - Prueba la URL directamente:", url);
+      
+      // Detectar si es un error de conexión (backend no está corriendo)
+      if (url.includes("localhost") || url.includes("127.0.0.1")) {
+        console.error("❌ ERROR: El backend NO está corriendo en localhost");
+        console.error("📋 PASOS PARA SOLUCIONAR:");
+        console.error("   1. Abre una nueva terminal");
+        console.error("   2. Ve a la carpeta del backend:");
+        console.error("      cd c:\\Users\\Usuario\\Desktop\\trabajos\\administrarcolores_back");
+        console.error("   3. Inicia el backend:");
+        console.error("      npm run dev");
+        console.error("   4. Espera a ver: 'El servidor se esta ejecutando en http://localhost:3001'");
+        console.error("   5. Vuelve a esta página y recarga");
+        console.error("");
+        console.error("🔗 URL que intentó conectar:", url);
+        console.error("💡 El backend debe estar corriendo en:", url.split('/api')[0]);
+      } else {
+        console.error("   1. ¿El backend está funcionando?");
+        console.error("   2. ¿La URL es correcta?", url);
+        console.error("   3. ¿Hay problemas de CORS?");
+        console.error("   4. ¿El backend responde a OPTIONS?");
+        console.error("💡 SOLUCIÓN:");
+        console.error("   - Verifica que el backend esté desplegado en Vercel");
+        console.error("   - Verifica la variable VITE_API_URL en Netlify");
+        console.error("   - Prueba la URL directamente:", url);
+      }
     }
     
     if (error.name === "SyntaxError") {
